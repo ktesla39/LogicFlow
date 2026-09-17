@@ -1,0 +1,6 @@
+{
+  "name": "LogicFlow",
+  "description": "Interactive logic gate visualizer and circuit simulator with real-time signal propagation, multi-sheet projects, and drag-and-drop wiring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

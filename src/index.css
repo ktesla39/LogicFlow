@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-x pan-y;
+  }
+
+  html {
+    background-color: #f1f5f9;
+    color: #0f172a;
+  }
+
+  html.dark {
+    background-color: #020617;
+    color: #f8fafc;
+  }
+}
+
+/* Authentic Electronic Circuit Signal Flow Animation */
+@keyframes wireFlowAnimation {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wire-signal-flow-active {
+  stroke-dasharray: 6, 10;
+  animation: wireFlowAnimation 0.8s linear infinite;
+}
+
+.wire-signal-flow-fast {
+  stroke-dasharray: 4, 8;
+  animation: wireFlowAnimation 0.5s linear infinite;
+}
+
+/* Subtle magnetic pin pulse */
+@keyframes magneticPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+.pin-magnetic-target {
+  animation: magneticPulse 0.8s ease-in-out infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.7);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+}
