@@ -3,11 +3,11 @@ import { CircuitNode, Wire } from '../types';
 /**
  * Intelligent Boolean Symbolic Algebra Engine
  * Implements standard Boolean algebraic notation:
- * - A+B for OR
- * - A.B for AND
+ * - A + B for OR
+ * - A · B for AND
  * - Ā (overbar / complement) for NOT / negation
  * - (A.B)̄ for NAND
- * - (A+B)̄ for NOR
+ * - (A + B)̄ for NOR
  * - A ⊕ B for XOR
  * - (A ⊕ B)̄ for XNOR
  */
@@ -143,7 +143,7 @@ export function buildAndExpression(a: string, b: string): string {
   if (termA > termB && isAtomic(termA) && isAtomic(termB)) {
     return `${termB}.${termA}`;
   }
-  return `${termA}.${termB}`;
+  return `${termA} · ${termB}`;
 }
 
 export function buildOrExpression(a: string, b: string): string {
@@ -181,6 +181,22 @@ export function buildXorExpression(a: string, b: string): string {
   const termA = isAtomic(e1) ? e1 : `(${e1})`;
   const termB = isAtomic(e2) ? e2 : `(${e2})`;
   return `${termA} ⊕ ${termB}`;
+}
+
+export function buildXnorExpression(a: string, b: string): string {
+  const e1 = a.trim();
+  const e2 = b.trim();
+
+  if (e1 === e2) return '1';
+  if (e1 === '0') return buildNotExpression(e2);
+  if (e2 === '0') return buildNotExpression(e1);
+  if (e1 === '1') return e2;
+  if (e2 === '1') return e1;
+  if (buildNotExpression(e1) === e2 || buildNotExpression(e2) === e1) return '0';
+
+  const termA = isAtomic(e1) ? e1 : `(${e1})`;
+  const termB = isAtomic(e2) ? e2 : `(${e2})`;
+  return `${termA} ⊙ ${termB}`;
 }
 
 /**
@@ -601,8 +617,12 @@ export function computeCircuitExpressions(
 
       case 'XNOR': {
         const valid = inputExprs.length > 0 ? inputExprs : ['0'];
-        const xorPart = valid.reduce((acc, curr) => buildXorExpression(acc, curr));
-        outputExpr = buildNotExpression(xorPart);
+        if (valid.length === 2) {
+          outputExpr = buildXnorExpression(valid[0], valid[1]);
+        } else {
+          const xorPart = valid.reduce((acc, curr) => buildXorExpression(acc, curr));
+          outputExpr = buildNotExpression(xorPart);
+        }
         break;
       }
 

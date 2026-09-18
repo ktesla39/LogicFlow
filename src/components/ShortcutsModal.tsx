@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, X, MousePointer, Cable, Play, Layers, Github } from 'lucide-react';
+import { HelpCircle, X, MousePointer, Cable, Play, Layers, Github, Keyboard } from 'lucide-react';
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
               <HelpCircle size={18} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-100">LogicFlow Quick Guide</h2>
+              <h2 className="text-base font-bold text-slate-100">LogixFlow Quick Guide</h2>
               <p className="text-xs text-slate-400">Controls, wiring & simulation tips</p>
             </div>
           </div>
@@ -49,8 +49,38 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             <div>
               <div className="font-semibold text-slate-200">Editing & Moving</div>
               <p className="text-slate-400 mt-0.5">
-                Drag any gate to move it. Click a wire to select it and click its red delete button or press <kbd className="px-1 py-0.5 rounded bg-slate-800 text-[10px] font-mono border border-slate-700">Delete</kbd>.
+                Drag any gate to move it. Click a wire to select it, then use the delete key or the red delete symbol.
               </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+            <Keyboard className="text-cyan-400 shrink-0 mt-0.5" size={18} />
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-200">Keyboard Shortcuts</div>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-400">
+                {[
+                  ['⌘/Ctrl Z', 'Undo'],
+                  ['⌘/Ctrl ⇧ Z', 'Redo'],
+                  ['Space', 'Run / pause'],
+                  ['Enter', 'Step simulation'],
+                  ['Delete', 'Delete selection'],
+                  ['+/− / 0', 'Zoom / reset view'],
+                  ['G', 'Toggle grid'],
+                  ['S', 'Toggle snap'],
+                  ['Alt ← / →', 'Previous / next sheet'],
+                  ['⌘/Ctrl S', 'Open JSON export'],
+                  ['⌘/Ctrl ⇧ S', 'Export SVG'],
+                  ['?', 'Open this guide'],
+                ].map(([shortcut, action]) => (
+                  <div key={shortcut} className="flex items-center justify-between gap-2">
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono border border-slate-700 text-slate-200 whitespace-nowrap">
+                      {shortcut}
+                    </kbd>
+                    <span className="text-right">{action}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -78,7 +108,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-800 bg-slate-950/40">
           <a
-            href="https://github.com/ktesla39/LogicFlow"
+            href="https://github.com/ktesla39/LogixFlow"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"

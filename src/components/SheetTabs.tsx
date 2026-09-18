@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sheet } from '../types';
-import { Plus, Copy, Trash2, Edit2, Layers, Check, X } from 'lucide-react';
+import { Plus, Copy, Trash2, Edit2, Layers, Check, X, Search, PanelTop } from 'lucide-react';
 
 interface SheetTabsProps {
   sheets: Sheet[];
@@ -26,6 +26,8 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
   const isDark = theme === 'dark';
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const startRename = (sheet: Sheet) => {
     setEditingId(sheet.id);
@@ -43,15 +45,139 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
     setEditingId(null);
   };
 
+  const filteredSheets = sheets.filter((sheet) =>
+    sheet.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  );
+
   return (
     <div
       id="sheet-tabs-bar"
-      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs overflow-x-auto select-none scrollbar-thin z-20 border-t transition-colors ${
+      className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs overflow-x-auto select-none scrollbar-thin z-20 border-t transition-colors ${
         isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/90 border-slate-300'
       }`}
     >
+      {isManagerOpen && (
+        <div
+          className={`absolute bottom-full left-2 right-2 sm:left-auto sm:w-[min(28rem,calc(100vw-1rem))] mb-2 z-50 rounded-xl border shadow-2xl overflow-hidden ${
+            isDark ? 'bg-slate-950 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+          }`}
+        >
+          <div className={`flex items-center justify-between px-3 py-2.5 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-2">
+              <PanelTop size={15} className={isDark ? 'text-sky-400' : 'text-sky-600'} />
+              <div>
+                <div className="text-xs font-semibold">Sheet manager</div>
+                <div className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                  {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'} in this project
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsManagerOpen(false)}
+              className={`p-1.5 rounded-md transition-colors ${
+                isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+              title="Close sheet manager"
+              aria-label="Close sheet manager"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className={`p-2 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <label className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <Search size={13} className="text-slate-500 shrink-0" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Find a sheet..."
+                className={`w-full bg-transparent text-xs outline-none ${isDark ? 'text-slate-100 placeholder:text-slate-600' : 'text-slate-900 placeholder:text-slate-400'}`}
+                aria-label="Find a sheet"
+              />
+            </label>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto p-1.5 space-y-1">
+            {filteredSheets.length === 0 ? (
+              <div className="px-3 py-6 text-center text-xs text-slate-500">No matching sheets</div>
+            ) : (
+              filteredSheets.map((sheet) => {
+                const isActive = sheet.id === activeSheetId;
+                return (
+                  <div
+                    key={`manager-${sheet.id}`}
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors ${
+                      isActive
+                        ? isDark
+                          ? 'bg-sky-950/50 border-sky-800/80'
+                          : 'bg-sky-50 border-sky-200'
+                        : isDark
+                        ? 'border-transparent hover:bg-slate-900'
+                        : 'border-transparent hover:bg-slate-50'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectSheet(sheet.id);
+                        setIsManagerOpen(false);
+                      }}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className={`truncate text-xs font-semibold ${isActive ? 'text-sky-500' : ''}`}>
+                        {sheet.name}
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-slate-500 font-mono">
+                        {sheet.nodes.length} nodes · {sheet.wires.length} wires
+                      </div>
+                    </button>
+                    <button type="button" onClick={() => startRename(sheet)} className="p-1.5 rounded text-slate-500 hover:text-sky-500 hover:bg-slate-800/60" title={`Rename ${sheet.name}`} aria-label={`Rename ${sheet.name}`}>
+                      <Edit2 size={12} />
+                    </button>
+                    <button type="button" onClick={() => onDuplicateSheet(sheet.id)} className="p-1.5 rounded text-slate-500 hover:text-sky-500 hover:bg-slate-800/60" title={`Duplicate ${sheet.name}`} aria-label={`Duplicate ${sheet.name}`}>
+                      <Copy size={12} />
+                    </button>
+                    {sheets.length > 1 && (
+                      <button type="button" onClick={() => onDeleteSheet(sheet.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-500 hover:bg-slate-800/60" title={`Delete ${sheet.name}`} aria-label={`Delete ${sheet.name}`}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className={`flex items-center justify-between gap-2 px-2.5 py-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <span className="text-[10px] text-slate-500">Double-click a tab to rename</span>
+            <button
+              type="button"
+              onClick={() => {
+                onCreateSheet();
+                setIsManagerOpen(false);
+              }}
+              className="flex items-center gap-1.5 rounded-md bg-sky-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-sky-500"
+            >
+              <Plus size={12} />
+              New sheet
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sheets Icon / Label */}
-      <div className="flex items-center gap-1.5 mr-2 font-medium shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsManagerOpen((open) => !open)}
+        className={`flex items-center gap-1.5 mr-2 font-medium shrink-0 rounded-md px-1.5 py-1 transition-colors ${
+          isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-300/70'
+        }`}
+        title="Open sheet manager"
+        aria-label="Open sheet manager"
+        aria-expanded={isManagerOpen}
+      >
         <Layers size={14} className={isDark ? 'text-sky-400' : 'text-sky-600'} />
         <span
           className={`hidden sm:inline text-[11px] font-semibold uppercase tracking-wider ${
@@ -60,7 +186,7 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
         >
           Sheets
         </span>
-      </div>
+      </button>
 
       {/* Tabs Container */}
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1">
@@ -124,7 +250,7 @@ export const SheetTabs: React.FC<SheetTabsProps> = ({
                   : 'bg-slate-200/50 border-transparent hover:bg-slate-300/80 text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="truncate max-w-[130px]">{sheet.name}</span>
+              <span className="truncate max-w-32.5">{sheet.name}</span>
 
               {/* Node count pill */}
               <span

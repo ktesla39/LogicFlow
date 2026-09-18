@@ -110,6 +110,34 @@ export const Canvas: React.FC<CanvasProps> = ({
     [snapToGrid]
   );
 
+  const pendingSheetUpdateRef = useRef<Partial<Sheet> | null>(null);
+  const sheetUpdateFrameRef = useRef<number | null>(null);
+  const scheduleSheetUpdate = useCallback(
+    (updated: Partial<Sheet>) => {
+      pendingSheetUpdateRef.current = {
+        ...pendingSheetUpdateRef.current,
+        ...updated,
+      };
+      if (sheetUpdateFrameRef.current !== null) return;
+
+      sheetUpdateFrameRef.current = window.requestAnimationFrame(() => {
+        sheetUpdateFrameRef.current = null;
+        const nextUpdate = pendingSheetUpdateRef.current;
+        pendingSheetUpdateRef.current = null;
+        if (nextUpdate) onUpdateSheet(nextUpdate);
+      });
+    },
+    [onUpdateSheet]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (sheetUpdateFrameRef.current !== null) {
+        window.cancelAnimationFrame(sheetUpdateFrameRef.current);
+      }
+    };
+  }, []);
+
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -151,7 +179,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   // Mouse move handler
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
-      onUpdateSheet({
+      scheduleSheetUpdate({
         pan: {
           x: e.clientX - panStart.x,
           y: e.clientY - panStart.y,
@@ -172,7 +200,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         return node;
       });
 
-      onUpdateSheet({ nodes: updatedNodes });
+      scheduleSheetUpdate({ nodes: updatedNodes });
       return;
     }
 
@@ -449,7 +477,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       if (isPanning) {
-        onUpdateSheet({
+        scheduleSheetUpdate({
           pan: {
             x: e.touches[0].clientX - panStart.x,
             y: e.touches[0].clientY - panStart.y,
@@ -466,7 +494,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           }
           return node;
         });
-        onUpdateSheet({ nodes: updatedNodes });
+        scheduleSheetUpdate({ nodes: updatedNodes });
       } else if (draggingWire) {
         const worldPos = screenToWorld(e.touches[0].clientX, e.touches[0].clientY);
         const nearest = getNearestTargetPin(worldPos.x, worldPos.y, draggingWire, 36);
@@ -518,24 +546,6 @@ export const Canvas: React.FC<CanvasProps> = ({
     touchDistanceRef.current = null;
   };
 
-  // Keyboard delete listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedNodeId) {
-          onDeleteNode(selectedNodeId);
-        } else if (selectedWireId) {
-          onDeleteWire(selectedWireId);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, selectedWireId, onDeleteNode, onDeleteWire]);
-
   // Is the selected node a configurable logic gate?
   const isConfigurableGate =
     selectedNode && ['AND', 'OR', 'NAND', 'NOR', 'XOR', 'XNOR'].includes(selectedNode.type);
@@ -581,6 +591,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       className={`relative flex-1 w-full h-full overflow-hidden ${
         isDark ? 'bg-[#0b0f19]' : 'bg-[#e4e7ec]'
       } cursor-grab active:cursor-grabbing select-none`}
+      style={{ touchAction: 'none' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -590,6 +601,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchEndCapture={handleTouchEnd}
     >
       {/* Crisp Grid Lines */}
       {showGrid && (
@@ -688,7 +700,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => onUpdateSettings({ running: false })}
+          onClick={onTogglePlayPause}
           className={`p-2 rounded flex items-center justify-center transition-colors ${
             !simulationRunning
               ? 'bg-[#f59e0b] text-white hover:bg-[#d97706]'
@@ -709,10 +721,11 @@ export const Canvas: React.FC<CanvasProps> = ({
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           }`}
           title="Single Step Simulation"
+          aria-label="Single Step Simulation"
         >
           <SkipForward size={16} />
         </button>
-        <div className={`h-5 w-[1px] mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+        <div className={`h-5 w-px mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
         <span
           className={`text-[11px] font-mono px-2 font-medium ${
             isDark ? 'text-slate-300' : 'text-slate-700'
@@ -781,7 +794,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           <div className="flex items-center justify-between px-3 py-2 bg-[#22272e] border-b border-[#2d333b]">
             <div className="flex items-center gap-2">
               <Cpu size={14} className="text-[#38bdf8]" />
-              <span className="font-bold text-xs tracking-wider text-white">LogicFlow</span>
+              <span className="font-bold text-xs tracking-wider text-white">LogixFlow</span>
             </div>
             <button
               type="button"
@@ -976,18 +989,22 @@ export const Canvas: React.FC<CanvasProps> = ({
       {sheet.nodes.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-slate-500">
           <div
-            className={`p-6 border-2 border-dashed rounded-2xl flex flex-col items-center max-w-sm text-center shadow-lg transition-colors ${
+            className={`p-5 sm:p-6 border border-dashed rounded-2xl flex flex-col items-center max-w-sm mx-4 text-center shadow-lg transition-colors backdrop-blur-sm ${
               isDark
-                ? 'border-slate-800 bg-slate-900/80 text-slate-400'
+                ? 'border-slate-700/80 bg-slate-900/85 text-slate-400'
                 : 'border-slate-300 bg-white/90 text-slate-600'
             }`}
           >
-            <Cpu size={32} className="text-[#0284c7] mb-2" />
+            <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-3">
+              <Cpu size={27} className="text-[#0284c7]" />
+            </div>
             <span className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-              LogicFlow Circuit Canvas
+              LogixFlow Circuit Canvas
             </span>
             <p className="text-xs mt-1.5 leading-relaxed">
-              Drag logic gates, switches, and bulbs from the sidebar to start creating your circuit. Right-click on desktop (or double-tap on mobile) to inspect properties!
+              <span className="hidden sm:inline">Drag logic gates, switches, and bulbs from the sidebar to start creating your circuit. </span>
+              <span className="sm:hidden">Tap the + button above to add your first component. </span>
+              Right-click on desktop or double-tap on mobile to inspect properties.
             </p>
           </div>
         </div>

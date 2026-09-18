@@ -24,7 +24,7 @@ export const TruthTableModal: React.FC<TruthTableModalProps> = ({
 
   const { inputNames, outputNames, entries } = generateTruthTable(nodes, wires);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (entries.length === 0) return;
 
     // Build markdown table
@@ -38,9 +38,24 @@ export const TruthTableModal: React.FC<TruthTableModalProps> = ({
 
     const markdown = `| ${headers} |\n| ${divider} |\n${rows.map((r) => `| ${r} |`).join('\n')}`;
 
-    navigator.clipboard.writeText(markdown);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(markdown);
+      } else {
+        const fallback = document.createElement('textarea');
+        fallback.value = markdown;
+        fallback.style.position = 'fixed';
+        fallback.style.opacity = '0';
+        document.body.appendChild(fallback);
+        fallback.select();
+        document.execCommand('copy');
+        fallback.remove();
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
 
   return (

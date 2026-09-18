@@ -17,6 +17,7 @@ import {
   faMagnifyingGlassMinus,
   faExpand,
   faDownload,
+  faFileCode,
   faCircleQuestion,
   faHouse,
   faPlus,
@@ -27,6 +28,8 @@ import {
   faSquarePlus,
   faBolt,
   faTag,
+  faRotateLeft,
+  faRotateRight,
 } from '@fortawesome/free-solid-svg-icons';
 
 interface TopBarProps {
@@ -42,6 +45,11 @@ interface TopBarProps {
   onResetView: () => void;
   onOpenTruthTable: () => void;
   onOpenExportModal: () => void;
+  onExportSvg: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onOpenHelpModal: () => void;
   onLoadPreset: (presetIndex: number) => void;
   onToggleMobileDrawer: () => void;
@@ -60,6 +68,11 @@ export const TopBar: React.FC<TopBarProps> = ({
   onResetView,
   onOpenTruthTable,
   onOpenExportModal,
+  onExportSvg,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onOpenHelpModal,
   onLoadPreset,
   onToggleMobileDrawer,
@@ -97,7 +110,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <button
           type="button"
           onClick={onToggleMobileDrawer}
-          className="md:hidden p-1.5 rounded-lg bg-sky-600 text-white flex items-center justify-center shadow hover:bg-sky-500 transition-colors"
+          className="lf-control lf-icon-control md:hidden p-1.5 rounded-lg bg-sky-600 text-white shadow hover:bg-sky-500 transition-colors"
           title="Add Component"
         >
           <FontAwesomeIcon icon={faSquarePlus} className="w-3.5 h-3.5" />
@@ -108,7 +121,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             type="button"
             onClick={onNavigateHome}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/80 transition-colors shadow-sm"
+            className="lf-control flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/80 transition-colors shadow-sm"
             title="Return to Main Menu / Projects"
           >
             <FontAwesomeIcon icon={faHouse} className="w-3 h-3 text-sky-400" />
@@ -140,7 +153,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800/70 cursor-pointer group/title"
               title="Click to rename project"
             >
-              <span className="text-xs sm:text-sm font-bold text-white font-mono max-w-[130px] sm:max-w-[200px] truncate">
+              <span className="text-xs sm:text-sm font-bold text-white font-mono max-w-32.5 sm:max-w-50 truncate">
                 {projectName}
               </span>
               <FontAwesomeIcon
@@ -156,7 +169,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             type="button"
             onClick={onNewCircuit}
-            className="hidden lg:flex items-center gap-1 px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white text-xs border border-slate-700/60 transition-colors"
+            className="lf-control hidden lg:flex items-center gap-1 px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white text-xs border border-slate-700/60 transition-colors"
             title="Create a new blank circuit"
           >
             <FontAwesomeIcon icon={faPlus} className="w-2.5 h-2.5 text-emerald-400" />
@@ -172,7 +185,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           type="button"
           id="btn-toggle-run"
           onClick={() => onUpdateSettings({ running: !settings.running })}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs shadow-md transition-all ${
+          className={`lf-control flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs shadow-md transition-all ${
             settings.running
               ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
               : 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/40'
@@ -180,9 +193,6 @@ export const TopBar: React.FC<TopBarProps> = ({
           title={settings.running ? 'Pause simulation' : 'Run simulation'}
         >
           <FontAwesomeIcon icon={settings.running ? faPause : faPlay} className="w-3 h-3" />
-          <span className="hidden sm:inline">
-            {settings.running ? 'SIMULATING' : 'PAUSED'}
-          </span>
         </button>
 
         {/* Step Button */}
@@ -190,7 +200,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           type="button"
           id="btn-step"
           onClick={onStepSimulation}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-medium transition-colors"
+          className="lf-control flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-medium transition-colors"
           title="Step one clock pulse forward"
         >
           <FontAwesomeIcon icon={faForwardStep} className="w-3 h-3" />
@@ -202,11 +212,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           type="button"
           id="btn-truth-table"
           onClick={onOpenTruthTable}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700/80 text-xs font-medium transition-colors"
+          className="lf-control flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700/80 text-xs font-medium transition-colors"
           title="Generate Truth Table"
         >
           <FontAwesomeIcon icon={faTable} className="w-3 h-3" />
-          <span className="hidden md:inline">Truth Table</span>
         </button>
 
         {/* Oscilloscope / Waveforms Button */}
@@ -224,77 +233,31 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle Waveform Scope"
         >
           <FontAwesomeIcon icon={faWaveSquare} className="w-3 h-3" />
-          <span className="hidden lg:inline">Waveforms</span>
         </button>
       </div>
 
       {/* Secondary Controls & View Tools */}
       <div className="flex items-center gap-1 sm:gap-1.5">
-        {/* Circuit Examples Dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowPresetsMenu(!showPresetsMenu)}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 text-xs transition-colors"
-            title="Load Circuit Examples"
-          >
-            <FontAwesomeIcon icon={faBookOpen} className="w-3 h-3 text-amber-400" />
-            <span className="hidden md:inline">Examples</span>
-          </button>
-
-          {showPresetsMenu && (
-            <div
-              className="absolute right-0 mt-1 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 text-xs"
-              onClick={() => setShowPresetsMenu(false)}
-            >
-              <div className="px-2 py-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-                Preset Circuits
-              </div>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(0)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                1. All Logic Gates
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(1)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                2. Half Adder
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(2)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                3. SR Latch (Memory)
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(3)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                4. Clock & 7-Segment
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(4)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                5. D Flip-Flop (Sequential)
-              </button>
-              <button
-                type="button"
-                onClick={() => onLoadPreset(5)}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors"
-              >
-                6. 2:1 Multiplexer Router
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-35 disabled:hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition-colors"
+          title="Undo last circuit edit"
+          aria-label="Undo last circuit edit"
+        >
+          <FontAwesomeIcon icon={faRotateLeft} className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-35 disabled:hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition-colors"
+          title="Redo last circuit edit"
+          aria-label="Redo last circuit edit"
+        >
+          <FontAwesomeIcon icon={faRotateRight} className="w-3.5 h-3.5" />
+        </button>
 
         {/* Wire Style: Curved vs Orthogonal */}
         <button
@@ -310,19 +273,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <FontAwesomeIcon icon={faCodeBranch} className="w-3.5 h-3.5" />
         </button>
 
-        {/* Snap to Grid Toggle */}
-        <button
-          type="button"
-          onClick={() => onUpdateSettings({ snapToGrid: !settings.snapToGrid })}
-          className={`hidden sm:flex p-1.5 rounded-lg border transition-colors ${
-            settings.snapToGrid
-              ? 'bg-sky-950 border-sky-600 text-sky-400'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
-          }`}
-          title={settings.snapToGrid ? 'Snap to Grid: ON' : 'Snap to Grid: OFF'}
-        >
-          <FontAwesomeIcon icon={faMagnet} className="w-3.5 h-3.5" />
-        </button>
+        
 
         {/* Canvas Grid Lines Toggle */}
         <button
@@ -450,6 +401,15 @@ export const TopBar: React.FC<TopBarProps> = ({
           <FontAwesomeIcon icon={faDownload} className="w-3.5 h-3.5" />
         </button>
 
+        <button
+          type="button"
+          onClick={onExportSvg}
+          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-colors"
+          title="Export circuit as SVG"
+        >
+          <FontAwesomeIcon icon={faFileCode} className="w-3.5 h-3.5" />
+        </button>
+
         {/* Help Button */}
         <button
           type="button"
@@ -466,7 +426,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Official GitHub Repository Link */}
         <a
-          href="https://github.com/ktesla39/LogicFlow"
+          href="https://github.com/ktesla39/LogixFlow"
           target="_blank"
           rel="noopener noreferrer"
           id="btn-github-link"
@@ -475,7 +435,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/80'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-300 shadow-2xs'
           }`}
-          title="LogicFlow on GitHub (https://github.com/ktesla39/LogicFlow)"
+          title="LogixFlow on GitHub (https://github.com/ktesla39/LogixFlow)"
         >
           <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />

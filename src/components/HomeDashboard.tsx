@@ -109,37 +109,40 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
+    <div
+      className="h-dvh min-h-full overflow-y-auto overscroll-contain bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white"
+      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+    >
       {/* Top Banner & Navigation */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-950/60 ring-1 ring-white/20">
+      <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-sky-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-950/60 ring-1 ring-white/20">
             <Cpu className="text-white" size={22} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-white font-mono">
-                LOGICFLOW <span className="text-sky-400">STUDIO</span>
+                LOGIXFLOW <span className="text-sky-400">STUDIO</span>
               </h1>
               
             </div>
-            <p className="text-xs text-slate-400">Digital Logic Circuit Design & Symbolic Algebra Lab</p>
+            <p className="hidden sm:block text-xs text-slate-400">Digital Logic Circuit Design & Symbolic Algebra Lab</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto">
           <a
-            href="https://github.com/ktesla39/LogicFlow"
+            href="https://github.com/ktesla39/LogixFlow"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-colors min-h-10"
             title="View on GitHub"
           >
             <Github size={14} />
             <span className="hidden sm:inline">GitHub</span>
           </a>
 
-          <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium cursor-pointer transition-colors">
+          <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium cursor-pointer transition-colors min-h-10">
             <Upload size={14} />
             <span>Import JSON</span>
             <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
@@ -148,7 +151,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           <button
             type="button"
             onClick={() => onCreateBlankProject()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-950 transition-all active:scale-95"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-950 transition-all active:scale-95 min-h-10"
           >
             <Plus size={16} />
             <span>New Blank Circuit</span>
@@ -157,9 +160,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       </header>
 
       {/* Main Home Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
         {/* Welcome & Quick Action Hero */}
-        <section className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-6 md:p-8 relative overflow-hidden shadow-xl">
+        <section className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/90 to-slate-950 p-5 sm:p-6 md:p-8 relative overflow-hidden shadow-xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -472,7 +475,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       <footer className="border-t border-slate-900 bg-slate-950/80 px-6 py-5 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-slate-300">LogicFlow Studio</span>
+            <span className="font-mono font-bold text-slate-300">LogixFlow Studio</span>
             <span>•</span>
             <span>Open Source Digital Logic Circuit Simulator</span>
           </div>
@@ -481,13 +484,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
               MIT License
             </span>
             <a
-              href="https://github.com/ktesla39/LogicFlow"
+              href="https://github.com/ktesla39/LogixFlow"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-slate-400 hover:text-sky-400 transition-colors font-mono"
             >
               <Github size={13} />
-              <span>github.com/ktesla39/LogicFlow</span>
+              <span>github.com/ktesla39/LogixFlow</span>
             </a>
           </div>
         </div>

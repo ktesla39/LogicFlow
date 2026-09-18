@@ -39,12 +39,27 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     setStatusMsg({ type: 'success', text: `Loaded all ${sheets.length} sheets JSON below` });
   };
 
-  const copyJson = () => {
+  const copyJson = async () => {
     if (!jsonText) exportAllSheets();
     const textToCopy = jsonText || JSON.stringify(sheets, null, 2);
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const fallback = document.createElement('textarea');
+        fallback.value = textToCopy;
+        fallback.style.position = 'fixed';
+        fallback.style.opacity = '0';
+        document.body.appendChild(fallback);
+        fallback.select();
+        document.execCommand('copy');
+        fallback.remove();
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setStatusMsg({ type: 'error', text: 'Unable to copy JSON on this device.' });
+    }
   };
 
   const downloadFile = () => {
@@ -53,7 +68,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `logicflow-circuits-${Date.now()}.json`;
+    link.download = `logixflow-circuits-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -82,6 +97,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         importedSheets = [parsed];
       } else {
         throw new Error('Invalid format: expected sheet object or array of sheets');
+      }
+
+      if (importedSheets.length === 0) {
+        throw new Error('At least one sheet is required');
       }
 
       onImportSheets(importedSheets);
@@ -179,7 +198,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               rows={8}
               value={jsonText}
               onChange={(e) => setJsonText(e.target.value)}
-              placeholder="Paste LogicFlow JSON here to import, or click 'All Sheets' to export..."
+              placeholder="Paste LogixFlow JSON here to import, or click 'All Sheets' to export..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-sky-500 scrollbar-thin"
             />
           </div>

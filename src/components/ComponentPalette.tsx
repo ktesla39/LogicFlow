@@ -133,12 +133,16 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
         }`}
       >
         {filtered.map((item) => (
-          <div
+          <button
             key={item.type}
+            type="button"
             draggable
             onDragStart={(e) => handleDragStart(e, item.type)}
-            onClick={() => onAddComponent(item.type)}
-            className={`flex flex-col items-center justify-center p-2 rounded border shadow-xs hover:shadow transition-all cursor-grab active:cursor-grabbing group select-none min-h-[66px] ${
+            onClick={() => {
+              onAddComponent(item.type);
+              if (isMobileDrawerOpen) onToggleMobileDrawer();
+            }}
+            className={`flex flex-col items-center justify-center p-2 rounded border shadow-xs hover:shadow transition-all cursor-grab active:cursor-grabbing group select-none min-h-16.5 ${
               isDark
                 ? 'bg-slate-800/80 hover:bg-slate-750 border-slate-700/70 hover:border-sky-500 text-slate-200'
                 : 'bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-500 text-slate-700'
@@ -157,7 +161,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
             >
               {item.name}
             </span>
-          </div>
+          </button>
         ))}
       </div>
     );

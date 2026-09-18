@@ -251,7 +251,7 @@ export const WireRenderer: React.FC<WireRendererProps> = ({
             {/* Directional Flow Chevron Indicator along the wire */}
             <g
               transform={`translate(${midX}, ${midY}) rotate(${angleDeg})`}
-              className="pointer-events-none select-none transition-transform group-hover:scale-125"
+              className="pointer-events-none select-none"
             >
               <circle
                 r="7"
@@ -317,7 +317,7 @@ export const WireRenderer: React.FC<WireRendererProps> = ({
             {isSelected && (
               <g
                 transform={`translate(${midX}, ${midY})`}
-                className="cursor-pointer transition-transform hover:scale-110"
+                className="cursor-pointer transition-opacity hover:opacity-90"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteWire(wire.id);

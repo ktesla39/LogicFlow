@@ -31,6 +31,11 @@ const DEFAULT_SETTINGS: SimulationSettings = {
   showComponentVariables: true,
 };
 
+interface HistoryEntry {
+  projects: Project[];
+  activeProjectId: string | null;
+}
+
 function createBlankProject(name: string = 'Untitled Circuit'): Project {
   const sheetId = `sheet_${Date.now()}`;
   return {
@@ -99,6 +104,11 @@ export default function App() {
 
   // Digital oscilloscope signal histories
   const [signals, setSignals] = useState<SignalHistory[]>([]);
+  const historyRef = useRef<{ past: HistoryEntry[]; future: HistoryEntry[] }>({
+    past: [],
+    future: [],
+  });
+  const [historyRevision, setHistoryRevision] = useState(0);
 
   // Sound sync
   useEffect(() => {
@@ -130,23 +140,62 @@ export default function App() {
     updatedAt: Date.now(),
   };
 
-  // Debounced persistence to localStorage
+  const recordHistory = useCallback(() => {
+    historyRef.current.past.push({ projects, activeProjectId });
+    historyRef.current.future = [];
+    setHistoryRevision((revision) => revision + 1);
+  }, [projects, activeProjectId]);
+
+  const handleUndo = useCallback(() => {
+    const previous = historyRef.current.past.pop();
+    if (!previous) return;
+
+    historyRef.current.future.push({ projects, activeProjectId });
+    setProjects(previous.projects);
+    setActiveProjectId(previous.activeProjectId);
+    setSelectedNodeId(null);
+    setSelectedWireId(null);
+    setHistoryRevision((revision) => revision + 1);
+  }, [projects, activeProjectId]);
+
+  const handleRedo = useCallback(() => {
+    const next = historyRef.current.future.pop();
+    if (!next) return;
+
+    historyRef.current.past.push({ projects, activeProjectId });
+    setProjects(next.projects);
+    setActiveProjectId(next.activeProjectId);
+    setSelectedNodeId(null);
+    setSelectedWireId(null);
+    setHistoryRevision((revision) => revision + 1);
+  }, [projects, activeProjectId]);
+
+  const canUndo = historyRevision >= 0 && historyRef.current.past.length > 0;
+  const canRedo = historyRevision >= 0 && historyRef.current.future.length > 0;
+
+  // Debounced persistence keeps drag and simulation updates off the storage path.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(projects));
-      if (activeProjectId) {
-        localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, activeProjectId);
+    const timeoutId = window.setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(projects));
+        if (activeProjectId) {
+          localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, activeProjectId);
+        }
+        localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.warn('Failed to save to localStorage:', e);
       }
-      localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(settings));
-    } catch (e) {
-      console.warn('Failed to save to localStorage:', e);
-    }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
   }, [projects, activeProjectId, settings]);
 
   // Update current active project & sheet
   const handleUpdateCurrentSheet = useCallback(
     (updated: Partial<Sheet>) => {
       if (!activeProject) return;
+
+      recordHistory();
 
       setProjects((prevProjects) =>
         prevProjects.map((p) => {
@@ -167,12 +216,16 @@ export default function App() {
         })
       );
     },
-    [activeProject, currentSheet.id]
+    [activeProject, currentSheet.id, recordHistory]
   );
 
   // Simulation tick logic
   const stepSimulation = useCallback(() => {
     if (!activeProject) return;
+
+    // Evaluate before scheduling React state so waveform history never reads a deferred updater.
+    const evaluated = evaluateCircuit(currentSheet.nodes, currentSheet.wires, Date.now());
+    const { nodes: evaluatedNodes, wires: evaluatedWires, buzzerActive } = evaluated;
 
     setProjects((prevProjects) =>
       prevProjects.map((proj) => {
@@ -181,45 +234,10 @@ export default function App() {
         const updatedSheets = proj.sheets.map((sheet) => {
           if (sheet.id !== proj.activeSheetId) return sheet;
 
-          const evaluated = evaluateCircuit(sheet.nodes, sheet.wires, Date.now());
-          sound.playBuzzer(evaluated.buzzerActive);
-
-          // Record signals for waveform oscilloscope
-          setSignals((prevSignals) => {
-            const monitoredNodes = evaluated.nodes.filter(
-              (n) =>
-                n.type === 'CLOCK' ||
-                n.type === 'SWITCH' ||
-                n.type === 'LED' ||
-                n.type === 'PROBE' ||
-                n.type === 'BUZZER'
-            );
-
-            if (monitoredNodes.length === 0) return [];
-
-            return monitoredNodes.map((n) => {
-              const existing = prevSignals.find((s) => s.id === n.id);
-              const isHigh =
-                n.type === 'LED' || n.type === 'PROBE' || n.type === 'BUZZER'
-                  ? Boolean(n.inputs[0]?.value)
-                  : Boolean(n.outputs[0]?.value);
-
-              const history = existing ? [...existing.history, isHigh] : [isHigh];
-              if (history.length > 36) history.shift();
-
-              return {
-                id: n.id,
-                name: n.label,
-                color: n.state.color || '#10b981',
-                history,
-              };
-            });
-          });
-
           return {
             ...sheet,
-            nodes: evaluated.nodes,
-            wires: evaluated.wires,
+            nodes: evaluatedNodes,
+            wires: evaluatedWires,
           };
         });
 
@@ -229,35 +247,63 @@ export default function App() {
         };
       })
     );
-  }, [activeProject]);
 
-  // Continuous simulation loop
-  const animFrameRef = useRef<number | null>(null);
-  const lastTickTimeRef = useRef<number>(Date.now());
+    // Side effects AFTER state update (not inside updater)
+    sound.playBuzzer(buzzerActive);
 
+    // Update signals after projects state is committed
+    if (evaluatedNodes.length > 0) {
+      const monitoredNodes = evaluatedNodes.filter(
+        (n) =>
+          n.type === 'CLOCK' ||
+          n.type === 'SWITCH' ||
+          n.type === 'LED' ||
+          n.type === 'PROBE' ||
+          n.type === 'BUZZER'
+      );
+
+      if (monitoredNodes.length > 0) {
+        setSignals((prevSignals) => {
+          const newSignals = monitoredNodes.map((n) => {
+            const existing = prevSignals.find((s) => s.id === n.id);
+            const isHigh =
+              n.type === 'LED' || n.type === 'PROBE' || n.type === 'BUZZER'
+                ? Boolean(n.inputs[0]?.value)
+                : Boolean(n.outputs[0]?.value);
+
+            const history = existing ? [...existing.history, isHigh] : [isHigh];
+            if (history.length > 36) history.shift();
+
+            return {
+              id: n.id,
+              name: n.label,
+              color: n.state.color || '#10b981',
+              history,
+            };
+          });
+          return newSignals;
+        });
+      }
+    }
+  }, [activeProject, currentSheet.nodes, currentSheet.wires]);
+
+  const hasTimeDependentCircuit = currentSheet.nodes.some((node) =>
+    ['CLOCK', 'D_FLIP_FLOP', 'T_FLIP_FLOP', 'JK_FLIP_FLOP', 'SR_FLIP_FLOP'].includes(node.type)
+  );
+
+  // Timer-based simulation avoids running JavaScript on every display frame.
   useEffect(() => {
-    if (viewMode !== 'editor' || !settings.running) {
+    if (viewMode !== 'editor' || !settings.running || !hasTimeDependentCircuit) {
       sound.stopBuzzer();
       return;
     }
 
     const interval = Math.max(settings.speedMs, 30);
 
-    const loop = () => {
-      const now = Date.now();
-      if (now - lastTickTimeRef.current >= interval) {
-        stepSimulation();
-        lastTickTimeRef.current = now;
-      }
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-
-    animFrameRef.current = requestAnimationFrame(loop);
+    const intervalId = window.setInterval(stepSimulation, interval);
 
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      window.clearInterval(intervalId);
       sound.stopBuzzer();
     };
   }, [viewMode, settings.running, settings.speedMs, stepSimulation]);
@@ -547,6 +593,13 @@ export default function App() {
     sound.playClick();
   };
 
+  const handleSelectAdjacentSheet = (direction: -1 | 1) => {
+    if (!activeProject || activeProject.sheets.length < 2) return;
+    const currentIndex = activeProject.sheets.findIndex((sheet) => sheet.id === currentSheet.id);
+    const nextIndex = (currentIndex + direction + activeProject.sheets.length) % activeProject.sheets.length;
+    handleSelectSheet(activeProject.sheets[nextIndex].id);
+  };
+
   // NODE OPERATIONS WITH INTELLIGENT VARIABLE NAMING
   const handleAddComponent = (type: NodeType) => {
     const canvasEl = document.getElementById('logicflow-canvas');
@@ -678,6 +731,25 @@ export default function App() {
     handleUpdateCurrentSheet({ zoom: 1.0, pan: { x: 80, y: 80 } });
   };
 
+  const handleExportSvg = async () => {
+    const canvas = document.getElementById('logicflow-canvas');
+    if (!canvas) return;
+
+    try {
+      const { toSvg } = await import('html-to-image');
+      const svgDataUrl = await toSvg(canvas, {
+        backgroundColor: settings.theme === 'dark' ? '#0b0f19' : '#e4e7ec',
+        filter: (node) => !node.classList?.contains('logicflow-export-ignore'),
+      });
+      const link = document.createElement('a');
+      link.href = svgDataUrl;
+      link.download = `logixflow-circuit-${Date.now()}.svg`;
+      link.click();
+    } catch (error) {
+      console.warn('Failed to export SVG:', error);
+    }
+  };
+
   // Apply truth table row test directly to canvas
   const handleApplyTruthTableRow = (rowInputs: Record<string, boolean>) => {
     const inputNodes = currentSheet.nodes.filter(
@@ -748,6 +820,123 @@ export default function App() {
     }
   };
 
+  // Central keyboard command layer. Text fields keep their native editing shortcuts.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+      if (isEditable) return;
+
+      const key = event.key.toLowerCase();
+      const hasModifier = event.ctrlKey || event.metaKey;
+
+      if (hasModifier && key === 'z') {
+        event.preventDefault();
+        event.shiftKey ? handleRedo() : handleUndo();
+        return;
+      }
+
+      if (hasModifier && key === 'y') {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setIsMobileDrawerOpen(false);
+        setIsTruthTableOpen(false);
+        setIsExportModalOpen(false);
+        setIsHelpModalOpen(false);
+        return;
+      }
+
+      if (viewMode !== 'editor') return;
+
+      if (hasModifier && key === 's') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          void handleExportSvg();
+        } else {
+          setIsExportModalOpen(true);
+        }
+        return;
+      }
+
+      if (hasModifier && key === 'o') {
+        event.preventDefault();
+        setIsExportModalOpen(true);
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        if (selectedNodeId) handleDeleteNode(selectedNodeId);
+        else if (selectedWireId) handleDeleteWire(selectedWireId);
+        return;
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault();
+        setSettings((previous) => ({ ...previous, running: !previous.running }));
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        stepSimulation();
+        return;
+      }
+
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault();
+        handleZoomIn();
+        return;
+      }
+
+      if (event.key === '-') {
+        event.preventDefault();
+        handleZoomOut();
+        return;
+      }
+
+      if (event.key === '0') {
+        event.preventDefault();
+        handleResetView();
+        return;
+      }
+
+      if (key === 'g') {
+        setSettings((previous) => ({ ...previous, showGrid: !previous.showGrid }));
+      } else if (key === 's') {
+        setSettings((previous) => ({ ...previous, snapToGrid: !previous.snapToGrid }));
+      } else if (key === '?') {
+        setIsHelpModalOpen(true);
+      } else if (event.altKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handleSelectAdjacentSheet(-1);
+      } else if (event.altKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleSelectAdjacentSheet(1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    viewMode,
+    selectedNodeId,
+    selectedWireId,
+    activeProject,
+    currentSheet.id,
+    handleUndo,
+    handleRedo,
+    handleExportSvg,
+    stepSimulation,
+  ]);
+
   // If in Home Tab (Main Menu), render the Home Dashboard
   if (viewMode === 'home') {
     return (
@@ -767,7 +956,7 @@ export default function App() {
   // Otherwise, render the Circuit Editor Workspace
   return (
     <div
-      className={`flex flex-col h-screen w-screen overflow-hidden antialiased font-sans transition-colors ${
+      className={`flex flex-col h-dvh min-h-screen w-screen overflow-hidden antialiased font-sans transition-colors ${
         settings.theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
       }`}
     >
@@ -785,6 +974,11 @@ export default function App() {
         onResetView={handleResetView}
         onOpenTruthTable={() => setIsTruthTableOpen(true)}
         onOpenExportModal={() => setIsExportModalOpen(true)}
+        onExportSvg={handleExportSvg}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onOpenHelpModal={() => setIsHelpModalOpen(true)}
         onLoadPreset={handleLoadPresetIntoProject}
         onToggleMobileDrawer={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
@@ -865,6 +1059,7 @@ export default function App() {
         onClose={() => setIsExportModalOpen(false)}
         onImportSheets={(imported) => {
           if (!activeProject) return;
+          if (imported.length === 0) return;
           setProjects((prev) =>
             prev.map((p) => (p.id === activeProject.id ? { ...p, sheets: imported } : p))
           );

@@ -1,12 +1,12 @@
-# LogicFlow ⚡
+# LogixFlow ⚡
 > Modern, interactive logic gate visualizer and digital circuit simulation studio with real-time signal flow, symbolic Boolean algebra, and oscilloscope timing waveforms.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Repository](https://img.shields.io/badge/GitHub-ktesla39%2FLogicFlow-181717?logo=github)](https://github.com/ktesla39/LogicFlow)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-ktesla39%2FLogixFlow-181717?logo=github)](https://github.com/ktesla39/LogixFlow)
 
-LogicFlow is an electronic design automation (EDA) and digital logic simulator built for students, educators, and engineers. Design combinational and sequential logic circuits from scratch, observe dynamic electron/signal flow propagation in real time, analyze Boolean expressions algebraically, and simulate digital clock cycles with precision.
+LogixFlow is an electronic design automation (EDA) and digital logic simulator built for students, educators, and engineers. Design combinational and sequential logic circuits from scratch, observe dynamic electron/signal flow propagation in real time, analyze Boolean expressions algebraically, and simulate digital clock cycles with precision.
 
-Official Repository: [https://github.com/ktesla39/LogicFlow](https://github.com/ktesla39/LogicFlow)
+Official Repository: [https://github.com/ktesla39/LogixFlow](https://github.com/ktesla39/LogixFlow)
 
 ---
 
@@ -47,8 +47,8 @@ Official Repository: [https://github.com/ktesla39/LogicFlow](https://github.com/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/ktesla39/LogicFlow.git
-   cd LogicFlow
+   git clone https://github.com/ktesla39/LogixFlow.git
+   cd LogixFlow
    ```
 
 2. Install dependencies:
@@ -86,4 +86,4 @@ Official Repository: [https://github.com/ktesla39/LogicFlow](https://github.com/
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-Developed with care by [ktesla39](https://github.com/ktesla39/LogicFlow). Contributions and feedback are warmly welcomed!
+Developed with care by [ktesla39](https://github.com/ktesla39/LogixFlow). Contributions and feedback are warmly welcomed!
